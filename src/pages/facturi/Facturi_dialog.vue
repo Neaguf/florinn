@@ -10,39 +10,85 @@
       @submit.prevent="save"
       v-loading="loadingVisible"
     >
+      <!-- Dialog -->
       <el-row :gutter="15">
         <el-col :md="8">
-          <el-form-item label="Client">
-            <el-input class="full-width" v-model="selectedObject.Client" />
+          <el-form-item label="Serie" prop="Serie">
+            <el-input class="full-width" v-model="selectedObject.Serie" />
+          </el-form-item> </el-col
+        ><el-col :md="8">
+          <el-form-item label="Nume" prop="Nume">
+            <el-input class="full-width" v-model="selectedObject.Nume" />
           </el-form-item>
         </el-col>
         <el-col :md="8">
-          <el-form-item label="Cnp">
+          <el-form-item label="Prenume" prop="Prenume">
+            <el-input class="full-width" v-model="selectedObject.Prenume" />
+          </el-form-item>
+        </el-col>
+        <el-col :md="8">
+          <el-form-item label="Cnp" prop="Cnp">
             <el-input class="full-width" v-model="selectedObject.Cnp" />
           </el-form-item>
         </el-col>
       </el-row>
+      <el-card>
+        <h5>PRODUSE</h5>
 
-      <el-row :gutter="15">
-        <el-col :md="8">
-          <el-form-item label="Total">
-            <el-input class="full-width" v-model="selectedObject.Total" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row :gutter="15">
-        <el-col :md="8">
-          <el-select multiple v-model="value1" placeholder="Select">
-            <el-option
-              v-for="item in facturi"
-              :key="item.Id"
-              :label="item.Nume"
-              :value="item.Id"
-            >
-            </el-option>
-          </el-select>
-        </el-col>
-      </el-row>
+        <!-- labels produse -->
+        <div class="produseColoane">
+          <p>Denumire</p>
+          <p>Pret</p>
+          <p>Cantitate</p>
+          <p>Valoare</p>
+        </div>
+        <div
+          v-for="(item, index) in itemProduse"
+          :key="item.idProdus + index"
+          class="produseValori"
+        >
+          <!-- facem un select pe id-ul produsului -->
+          <el-select
+            v-model="item.idProdus"
+            @change="changeProdus(index, item.idProdus)"
+            ><el-option
+              v-for="produs in Produse"
+              :key="produs.Id"
+              :label="produs.Nume"
+              :value="produs.Id"
+            ></el-option
+          ></el-select>
+          <el-input-number
+            style="width: 25%"
+            v-model="item.pretProdus"
+          ></el-input-number>
+          <el-input-number
+            style="width: 25%"
+            v-model="item.cantitateProdus"
+          ></el-input-number>
+          <p style="width: 25%; padding-left: 60px">
+            {{ item.pretProdus * item.cantitateProdus }}
+          </p>
+          <el-tooltip content="Sterge">
+            <el-button
+              type="danger"
+              icon="el-icon-delete"
+              circle
+              @click="deleteProdus(index)"
+            />
+          </el-tooltip>
+        </div>
+        <el-button @click="addItemProdus()">+</el-button>
+      </el-card>
+
+      <el-card>
+        TOTAL:
+        {{
+          itemProduse
+            .map((p) => p.pretProdus * p.cantitateProdus)
+            .reduce((acc, curent) => acc + curent, 0)
+        }}
+      </el-card>
     </el-form>
     <span slot="footer" class="dialog-footer">
       <el-button @click="showPopup = false"> Renunta </el-button>
@@ -61,24 +107,28 @@ export default {
   components: {},
   data() {
     return {
-      value1: "",
-      value: "Option5",
+      Produse: [],
       baseUrl: "",
       showPopup: false,
       mode: "add",
       selectedObject: {
-        Client: "",
+        Serie: "",
+        Numar: "",
+        Nume: "",
+        Prenume: "",
         Cnp: "",
-        Total: "",
+        Data: "",
       },
-      produse: [],
       Info: {},
       rules: {
         //   Nume: [ { required: true, message: "Campul este obligatoriu" } ]
-        Client: [{ required: true, message: "Campul este obligatoriu" }],
+        Serie: [{ required: true, message: "Campul este obligatoriu" }],
+        Data: [{ required: true, message: "Campul este obligatoriu" }],
+        Nume: [{ required: true, message: "Campul este obligatoriu" }],
+        Prenume: [{ required: true, message: "Campul este obligatoriu" }],
         Cnp: [{ required: true, message: "Campul este obligatoriu" }],
-        Total: [{ required: true, message: "Campul este obligatoriu" }],
       },
+      itemProduse: [{ idProdus: "", cantitateProdus: 1, pretProdus: 300 }],
     };
   },
   methods: {
@@ -86,19 +136,33 @@ export default {
       this.showPopup = true;
       if (id == null) {
         this.mode = "add";
+        this.selectedObject = {
+          Serie: "",
+          Numar: "",
+          Nume: "",
+          Prenume: "",
+          Cnp: "",
+          Data: "",
+        };
       } else {
         this.mode = "edit";
         var result = await this.post("facturi/get_info_item_dialog", {
           id: id,
         });
         this.selectedObject = result.Item;
+        this.itemProduse = [];
+        this.itemProduse = result.Produse.map((produs) => {
+          return {
+            idProdus: produs.IdProdus,
+            cantitateProdus: produs.Cantitate,
+            pretProdus: produs.Pret,
+          };
+        });
       }
     },
     async get_info() {
       var response = await this.post("facturi/get_info_for_dialog");
-      //   console.log(response.produse)
-      // selectam produse
-      this.facturi = response.facturi;
+      this.Produse = response.produse;
     },
     save: async function () {
       this.$refs["my-form"].validate(async (valid) => {
@@ -106,11 +170,28 @@ export default {
           await this.post("facturi/save", {
             mode: this.mode,
             object: this.selectedObject,
+            produse: this.itemProduse,
           });
           this.showPopup = false;
           this.$emit("save");
         }
       });
+    },
+    addItemProdus() {
+      this.itemProduse.push({
+        idProdus: "",
+        cantitateProdus: "",
+        pretProdus: "",
+      });
+    },
+    deleteProdus(id) {
+      console.log(id);
+      this.itemProduse.splice(id, 1);
+      console.log(this.itemProduse);
+    },
+    changeProdus(idProdusLista, idProdusBD) {
+      this.itemProduse[idProdusLista].pretProdus =
+        this.Produse[idProdusBD - 1].Pret;
     },
   },
   mounted: function () {
@@ -123,5 +204,22 @@ export default {
 <style lang="less" scoped>
 .full-width {
   width: 100%;
+}
+
+.produseColoane {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+}
+
+.produseValori {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  padding-bottom: 10px;
+}
+
+.produseColoane p {
+  width: 25%;
 }
 </style>

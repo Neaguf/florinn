@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+    "build": "vue-cli-service build && node ./publisher/publisher.js"
   },
   "dependencies": {
     "@tinymce/tinymce-vue": "^3.2.8",
+    "basic-ftp": "^5.0.2",
     "bootstrap": "^5.2.3",
     "bootstrap-vue": "^2.23.1",
     "core-js": "^3.8.3",
